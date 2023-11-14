@@ -103,13 +103,17 @@ class ListFileAPI(APIView):
 
                 binary_files = os.listdir(binary_folder_path) if os.path.exists(binary_folder_path) else []
                 result_files = os.listdir(result_folder_path) if os.path.exists(result_folder_path) else []
-
                 day_data = {
-                    day_folder: {
-                        'binary': binary_files,
-                        'result': result_files
-                    }
+                    'folder': day_folder,
+                    'binary': binary_files,
+                    'result': result_files
                 }
+                # day_data = {
+                #     day_folder: {
+                #         'binary': binary_files,
+                #         'result': result_files
+                #     }
+                # }
                 data.append(day_data)
 
         return JsonResponse({"message": "Hey, this is my API running 🥳", "data": data})
