@@ -7,8 +7,6 @@ from .util import *
 import os
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-
-
 results = {}
 mot_tracker = Sort()
 new_width = 1400
@@ -24,7 +22,7 @@ MODEL_DIR = os.path.join(BASE_DIR, 'assets/models/yolov8n.pt')
 LINCEMSE_MODEL_DIR = os.path.join(BASE_DIR,'assets/models/best.pt')
 VIDEO_DIR = os.path.join(BASE_DIR, 'assets/videos/sample7.mp4')
 MEDIA_DIR = os.path.join(BASE_DIR, 'pbl_traffic_be/media')
-
+class_vehicle = 0
 
 
 class Detech:
@@ -53,6 +51,7 @@ class Detech:
             os.makedirs(SAVE_MEDIA_DIR)
             os.makedirs(SAVE_BIARY_DIR)
         
+        
         while ret:
             frame_nmr += 1
             ret, frame = cap.read()
@@ -65,6 +64,8 @@ class Detech:
                     for detection in detections.boxes.data.tolist():
                         x1, y1, x2, y2, score, class_id = detection
                         if int(class_id) in vehicles:
+                            class_vehicle = int(class_id)
+                            print('line 66: ', int(class_id), class_vehicle)
                             detections_.append([x1, y1, x2, y2, score])
                     # Vẽ bounding boxes xung quanh các đối tượng đã phát hiện
                     for box in detections_:
@@ -80,6 +81,7 @@ class Detech:
                         license_plates = license_plate_detector(frame)[0]
                         for license_plate in license_plates.boxes.data.tolist():
                             x1, y1, x2, y2, score, class_id = license_plate
+                            print('===line 84 :',class_vehicle)
 
                             if license_plate not in processed_license_plates:
                                 xcar1, ycar1, xcar2, ycar2, car_id = get_car(license_plate, track_ids)
@@ -92,12 +94,12 @@ class Detech:
                                         frame_copy = frame.copy()
                                         cv2.rectangle(frame_copy, (xcar1, ycar1), (xcar2, ycar2), (0, 255, 0), 2)
                                         save_datetime = datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
-                                        output_path = os.path.join(SAVE_MEDIA_DIR, f"day_{save_datetime}-{car_id}.png")
+                                        output_path = os.path.join(SAVE_MEDIA_DIR, f"day_{save_datetime}-{car_id}-{class_vehicle}.png") # lưu id vehicles ở đây
                                         cv2.imwrite(output_path, frame_copy)
                                         saved_images[car_id] = True
                                         license_plate_crop = frame[int(y1):int(y2), int(x1):int(x2), :]
                                         license_plate_crop_binary = convert_to_binary(license_plate_crop)
-                                        binary_output_path = os.path.join(SAVE_BIARY_DIR, f"day_{save_datetime}-{car_id}.png")
+                                        binary_output_path = os.path.join(SAVE_BIARY_DIR, f"day_{save_datetime}-{car_id}-{class_vehicle}.png")# lưu id vehicles ở đây
                                         cv2.imwrite(binary_output_path, license_plate_crop_binary)
                                         cv2.imshow("Binary Image", license_plate_crop_binary)
                                                         

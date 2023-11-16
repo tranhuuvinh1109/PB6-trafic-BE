@@ -17,7 +17,7 @@ def convert_to_binary(license_plate_crop):
     # Chuyển pixel đen sang trắng và ngược lại
     thresh = cv2.bitwise_not(thresh)
     # thresh = imutils.resize(thresh, width=100)
-    thresh = cv2.resize(thresh,(150,150),interpolation=cv2.INTER_LANCZOS4) #or INTER_CUBIC
+    thresh = cv2.resize(thresh,(100,100),interpolation=cv2.INTER_LANCZOS4) #or INTER_CUBIC
     
     # blurred = cv2.GaussianBlur(thresh, (5, 5), 0)
     # sharpened = cv2.addWeighted(thresh, 2.0, blurred, -0.5, 0)
