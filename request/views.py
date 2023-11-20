@@ -1,7 +1,10 @@
-from django.http import JsonResponse
+import cv2
+from django.http import JsonResponse, StreamingHttpResponse
+from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from ultralytics import YOLO
 from request.detech import Detech
 from datetime import datetime
 import os
@@ -12,7 +15,6 @@ from .models import Vehicle
 
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
 
 
 def create_vehicle(data):
@@ -45,6 +47,11 @@ class DetechAPI(APIView):
         print('running...')
         Detech.DetechLicensePlate()
         return JsonResponse({"message": "Hey this is my API running 🥳"})
+    
+class StreamAPI(APIView):
+    def get(self, request):
+        print('running...')
+        return render(request, 'index.html')
     
 def remove_specific_characters(input_str):
     special_characters = [';', '/', '\\', '*', '(', ')', '&', '^', '%', '$', '!', ' ', '[', ']', '-', '.', "'", ',', '?', '+', '}', '{']
@@ -234,3 +241,135 @@ class DeleteAllVehicles(APIView):
         except Exception as e:
             error_message = f"Error deleting vehicles: {e}"
             return Response({"error": error_message}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+from django.shortcuts import render
+from django.http import StreamingHttpResponse
+from datetime import datetime
+from ultralytics import YOLO
+import cv2
+import numpy as np
+from sort.sort import *
+from .util import *
+import os
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+results = {}
+mot_tracker = Sort()
+new_width = 1400
+new_height = 1000
+vehicles = [2, 3, 5, 7]
+frame_nmr = -1
+ret = True
+frame_skip = 1  # Số frame bạn muốn bỏ qua giữa các lần xử lý   
+# Danh sách biển số xe đã xử lý
+processed_license_plates = []
+saved_images = {}
+MODEL_DIR = os.path.join(BASE_DIR, 'assets/models/yolov8n.pt')
+LINCEMSE_MODEL_DIR = os.path.join(BASE_DIR,'assets/models/best.pt')
+VIDEO_DIR = os.path.join(BASE_DIR, 'assets/videos/sample7.mp4')
+MEDIA_DIR = os.path.join(BASE_DIR, 'pbl_traffic_be/media')
+class_vehicle = 0
+stop_streaming = False
+def clear_stream(request):
+    global stop_streaming
+    print('--------------------------CLEAR------------------')
+    stop_streaming = True
+    return JsonResponse({'message': 'Streaming stopped successfully.'})
+
+def stream(address_id):
+    global stop_streaming
+    stop_streaming = False  
+    print('RUNIINGGG>>>> ....')
+    global ret
+    ret = True
+    global frame_nmr
+    frame_nmr = -1 
+    coco_model = YOLO(MODEL_DIR)
+    license_plate_detector = YOLO(LINCEMSE_MODEL_DIR)
+    formatted_datetime = datetime.now().strftime("%Y_%m_%d")
+    PRESENT_DIR = os.path.join(MEDIA_DIR, 'day_'+formatted_datetime)
+    SAVE_MEDIA_DIR = ''
+    SAVE_BIARY_DIR = ''
+    URL_VIDEO = ''
+    if(address_id == 1):
+        URL_VIDEO ='D:/Django/PB6-trafic-BE/assets/videos/video.mp4'
+    else:
+        URL_VIDEO = 'D:/Django/PB6-trafic-BE/assets/videos/night.mp4'
+        
+    cap = cv2.VideoCapture(URL_VIDEO)
+    if not os.path.exists(PRESENT_DIR):
+            os.makedirs(PRESENT_DIR)
+    SAVE_MEDIA_DIR = os.path.join(PRESENT_DIR, 'result')
+    SAVE_BIARY_DIR = os.path.join(PRESENT_DIR, 'binary')
+    
+    if not os.path.exists(SAVE_MEDIA_DIR):
+        os.makedirs(SAVE_MEDIA_DIR)
+        os.makedirs(SAVE_BIARY_DIR)
+    while cap.isOpened():
+        frame_nmr
+        ret, frame = cap.read()
+        if ret:
+            # frame = cv2.resize(frame, (new_width, new_height))
+            results[frame_nmr] = {}
+            if frame_nmr % frame_skip == 0:  # Bỏ qua frame không cần xử lý
+                detections = coco_model(frame, classes=[2, 3, 5, 7])[0]
+                detections_ = []
+                for detection in detections.boxes.data.tolist():
+                    x1, y1, x2, y2, score, class_id = detection
+                    if int(class_id) in vehicles:
+                        class_vehicle = int(class_id)
+                        detections_.append([x1, y1, x2, y2, score])
+                # Vẽ bounding boxes xung quanh các đối tượng đã phát hiện
+                for box in detections_:
+                    x1, y1, x2, y2, _ = box
+                    cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 2)
+                    # annotated_frame = frame[0].plot()
+                    
+            cv2.imwrite('demo.jpg', frame)
+            yield (b'--frame\r\n'
+                b'Content-Type: image/jpeg\r\n\r\n' + open('demo.jpg', 'rb').read() + b'\r\n')
+        
+            if stop_streaming:
+                break      
+
+            if frame_nmr % frame_skip == 0 and detections_:
+                track_ids = mot_tracker.update(np.asarray(detections_))
+                if frame_nmr % frame_skip == 0:
+                    license_plates = license_plate_detector(frame)[0]
+                    for license_plate in license_plates.boxes.data.tolist():
+                        x1, y1, x2, y2, score, class_id = license_plate
+
+                        if license_plate not in processed_license_plates:
+                            xcar1, ycar1, xcar2, ycar2, car_id = get_car(license_plate, track_ids)
+                            xcar1 = int(xcar1)
+                            ycar1 = int(ycar1)
+                            xcar2 = int(xcar2)
+                            ycar2 = int(ycar2)
+                            if xcar1 != -1 and ycar1 != -1 and xcar2 != -1 and ycar2 != -1:
+                                if car_id not in saved_images:
+                                    frame_copy = frame.copy()
+                                    cv2.rectangle(frame_copy, (xcar1, ycar1), (xcar2, ycar2), (0, 255, 0), 2)
+                                    save_datetime = datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
+                                    output_path = os.path.join(SAVE_MEDIA_DIR, f"day_{save_datetime}-{car_id}-{class_vehicle}.png") # lưu id vehicles ở đây
+                                    cv2.imwrite(output_path, frame_copy)
+                                    saved_images[car_id] = True
+                                    license_plate_crop = frame[int(y1):int(y2), int(x1):int(x2), :]
+                                    license_plate_crop_binary = convert_to_binary(license_plate_crop)
+                                    binary_output_path = os.path.join(SAVE_BIARY_DIR, f"day_{save_datetime}-{car_id}-{class_vehicle}.png")# lưu id vehicles ở đây
+                                    cv2.imwrite(binary_output_path, license_plate_crop_binary)
+                                    cv2.imshow("Binary Image", license_plate_crop_binary)
+                
+def index1(request):
+    return render(request, 'index1.html')
+
+def index2(request):
+    return render(request, 'index2.html')
+
+def video_feed_tdt(request):
+    print('ton =duc thang')
+    return StreamingHttpResponse(stream(1), content_type="multipart/x-mixed-replace;boundary=frame")
+
+def video_feed_dbp(request):
+    print('dine bien phu')
+    return StreamingHttpResponse(stream(2), content_type="multipart/x-mixed-replace;boundary=frame")

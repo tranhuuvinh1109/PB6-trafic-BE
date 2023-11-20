@@ -11,5 +11,5 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'pbl_traffic_be/media')
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('request.urls')),
-    path('', include('webcam.urls'))
+    path('', include('webcam.urls')),
 ]+ static(MEDIA_URL, document_root=MEDIA_ROOT)
