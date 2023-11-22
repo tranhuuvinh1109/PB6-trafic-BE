@@ -268,9 +268,11 @@ saved_images = {}
 MODEL_DIR = os.path.join(BASE_DIR, 'assets/models/yolov8n.pt')
 LINCEMSE_MODEL_DIR = os.path.join(BASE_DIR,'assets/models/best.pt')
 VIDEO_DIR = os.path.join(BASE_DIR, 'assets/videos/sample7.mp4')
+VIDEO_DIR_2 = os.path.join(BASE_DIR, 'assets/videos/night.mp4')
 MEDIA_DIR = os.path.join(BASE_DIR, 'pbl_traffic_be/media')
 class_vehicle = 0
 stop_streaming = False
+
 def clear_stream(request):
     global stop_streaming
     print('--------------------------CLEAR------------------')
@@ -293,9 +295,9 @@ def stream(address_id):
     SAVE_BIARY_DIR = ''
     URL_VIDEO = ''
     if(address_id == 1):
-        URL_VIDEO ='D:/Django/PB6-trafic-BE/assets/videos/video.mp4'
+        URL_VIDEO = VIDEO_DIR
     else:
-        URL_VIDEO = 'D:/Django/PB6-trafic-BE/assets/videos/night.mp4'
+        URL_VIDEO = VIDEO_DIR_2
         
     cap = cv2.VideoCapture(URL_VIDEO)
     if not os.path.exists(PRESENT_DIR):
@@ -310,7 +312,6 @@ def stream(address_id):
         frame_nmr
         ret, frame = cap.read()
         if ret:
-            # frame = cv2.resize(frame, (new_width, new_height))
             results[frame_nmr] = {}
             if frame_nmr % frame_skip == 0:  # Bỏ qua frame không cần xử lý
                 detections = coco_model(frame, classes=[2, 3, 5, 7])[0]
@@ -324,7 +325,6 @@ def stream(address_id):
                 for box in detections_:
                     x1, y1, x2, y2, _ = box
                     cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 2)
-                    # annotated_frame = frame[0].plot()
                     
             cv2.imwrite('demo.jpg', frame)
             yield (b'--frame\r\n'
@@ -333,7 +333,7 @@ def stream(address_id):
             if stop_streaming:
                 break      
 
-            if frame_nmr % frame_skip == 0 and detections_:
+            if detections_:
                 track_ids = mot_tracker.update(np.asarray(detections_))
                 if frame_nmr % frame_skip == 0:
                     license_plates = license_plate_detector(frame)[0]
@@ -358,7 +358,7 @@ def stream(address_id):
                                     license_plate_crop_binary = convert_to_binary(license_plate_crop)
                                     binary_output_path = os.path.join(SAVE_BIARY_DIR, f"day_{save_datetime}-{car_id}-{class_vehicle}.png")# lưu id vehicles ở đây
                                     cv2.imwrite(binary_output_path, license_plate_crop_binary)
-                                    cv2.imshow("Binary Image", license_plate_crop_binary)
+                                    # cv2.imshow("Binary Image", license_plate_crop_binary)
                 
 def index1(request):
     return render(request, 'index1.html')
@@ -367,9 +367,7 @@ def index2(request):
     return render(request, 'index2.html')
 
 def video_feed_tdt(request):
-    print('ton =duc thang')
     return StreamingHttpResponse(stream(1), content_type="multipart/x-mixed-replace;boundary=frame")
 
 def video_feed_dbp(request):
-    print('dine bien phu')
     return StreamingHttpResponse(stream(2), content_type="multipart/x-mixed-replace;boundary=frame")
