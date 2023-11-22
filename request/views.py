@@ -9,12 +9,31 @@ from request.detech import Detech
 from datetime import datetime
 import os
 import easyocr
-
 from request.serializers import VehicleSerializer
 from .models import Vehicle
+import numpy as np
+from sort.sort import *
+from .util import *
 
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+results = {}
+mot_tracker = Sort()
+new_width = 1400
+new_height = 1000
+vehicles = [2, 3, 5, 7]
+frame_nmr = -1
+ret = True
+frame_skip = 1  # Số frame bạn muốn bỏ qua giữa các lần xử lý   
+processed_license_plates = []
+saved_images = {}
+MODEL_DIR = os.path.join(BASE_DIR, 'assets/models/yolov8n.pt')
+LINCEMSE_MODEL_DIR = os.path.join(BASE_DIR,'assets/models/best.pt')
+VIDEO_DIR = os.path.join(BASE_DIR, 'assets/videos/sample7.mp4')
+VIDEO_DIR_2 = os.path.join(BASE_DIR, 'assets/videos/night.mp4')
+MEDIA_DIR = os.path.join(BASE_DIR, 'pbl_traffic_be/media')
+class_vehicle = 0
+stop_streaming = False
 
 
 def create_vehicle(data):
@@ -242,36 +261,6 @@ class DeleteAllVehicles(APIView):
             error_message = f"Error deleting vehicles: {e}"
             return Response({"error": error_message}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
-from django.shortcuts import render
-from django.http import StreamingHttpResponse
-from datetime import datetime
-from ultralytics import YOLO
-import cv2
-import numpy as np
-from sort.sort import *
-from .util import *
-import os
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-results = {}
-mot_tracker = Sort()
-new_width = 1400
-new_height = 1000
-vehicles = [2, 3, 5, 7]
-frame_nmr = -1
-ret = True
-frame_skip = 1  # Số frame bạn muốn bỏ qua giữa các lần xử lý   
-# Danh sách biển số xe đã xử lý
-processed_license_plates = []
-saved_images = {}
-MODEL_DIR = os.path.join(BASE_DIR, 'assets/models/yolov8n.pt')
-LINCEMSE_MODEL_DIR = os.path.join(BASE_DIR,'assets/models/best.pt')
-VIDEO_DIR = os.path.join(BASE_DIR, 'assets/videos/sample7.mp4')
-VIDEO_DIR_2 = os.path.join(BASE_DIR, 'assets/videos/night.mp4')
-MEDIA_DIR = os.path.join(BASE_DIR, 'pbl_traffic_be/media')
-class_vehicle = 0
-stop_streaming = False
 
 def clear_stream(request):
     global stop_streaming
