@@ -9,5 +9,5 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'pbl_traffic_be/media')
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', include('request.urls'))
+    path('api/', include('request.urls')),
 ]+ static(MEDIA_URL, document_root=MEDIA_ROOT)
