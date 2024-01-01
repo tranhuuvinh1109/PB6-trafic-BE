@@ -150,7 +150,7 @@ class LicensePlateAPI(APIView):
                     text_fixed = fix((" ".join(text)).upper())
 
                     binary_data["binary"].append({
-                        "location": 'DaNang',
+                        "location": file.split('-')[4],
                         "type": (file.split('-')[3]).split('.')[0],
                         "license": " ".join(text).upper(),
                         "license_fixed": text_fixed,
@@ -164,7 +164,7 @@ class LicensePlateAPI(APIView):
                     if not Vehicle.objects.filter(file_name=file).exists():
                         print('not existing')
                         data_create = {
-                            "location": 'DaNang',
+                            "location": file.split('-')[4],
                             "type": (file.split('-')[3]).split('.')[0],
                             "license": " ".join(text).upper(),
                             "confidence": confidence,
@@ -251,7 +251,7 @@ class UpdateVehicle(APIView):
             return Response({"error": error_message}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
 class DeleteAllVehicles(APIView):
-    def post(self, request):
+    def delete(self, request):
         try:
             print('Deleting all vehicles')
             Vehicle.objects.all().delete()
@@ -283,10 +283,13 @@ def stream(address_id):
     SAVE_MEDIA_DIR = ''
     SAVE_BIARY_DIR = ''
     URL_VIDEO = ''
+    LOCATION = ''
     if(address_id == 1):
         URL_VIDEO = VIDEO_DIR
+        LOCATION = 'TonDucThang'
     else:
         URL_VIDEO = VIDEO_DIR_2
+        LOCATION = 'DienBienPhu'
         
     cap = cv2.VideoCapture(URL_VIDEO)
     if not os.path.exists(PRESENT_DIR):
@@ -340,12 +343,12 @@ def stream(address_id):
                                     frame_copy = frame.copy()
                                     cv2.rectangle(frame_copy, (xcar1, ycar1), (xcar2, ycar2), (0, 255, 0), 2)
                                     save_datetime = datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
-                                    output_path = os.path.join(SAVE_MEDIA_DIR, f"day_{save_datetime}-{car_id}-{class_vehicle}.png") # lưu id vehicles ở đây
+                                    output_path = os.path.join(SAVE_MEDIA_DIR, f"day_{save_datetime}-{car_id}-{class_vehicle}-{LOCATION}.png") # lưu id vehicles ở đây
                                     cv2.imwrite(output_path, frame_copy)
                                     saved_images[car_id] = True
                                     license_plate_crop = frame[int(y1):int(y2), int(x1):int(x2), :]
                                     license_plate_crop_binary = convert_to_binary(license_plate_crop)
-                                    binary_output_path = os.path.join(SAVE_BIARY_DIR, f"day_{save_datetime}-{car_id}-{class_vehicle}.png")# lưu id vehicles ở đây
+                                    binary_output_path = os.path.join(SAVE_BIARY_DIR, f"day_{save_datetime}-{car_id}-{class_vehicle}-{LOCATION}.png")# lưu id vehicles ở đây
                                     cv2.imwrite(binary_output_path, license_plate_crop_binary)
                                     # cv2.imshow("Binary Image", license_plate_crop_binary)
                 
