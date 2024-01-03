@@ -24,7 +24,7 @@ new_height = 1000
 vehicles = [2, 3, 5, 7]
 frame_nmr = -1
 ret = True
-frame_skip = 1  # Số frame bạn muốn bỏ qua giữa các lần xử lý   
+frame_skip = 2  # Số frame bạn muốn bỏ qua giữa các lần xử lý   
 processed_license_plates = []
 saved_images = {}
 MODEL_DIR = os.path.join(BASE_DIR, 'assets/models/yolov8n.pt')
@@ -275,7 +275,7 @@ def stream(address_id):
     global ret
     ret = True
     global frame_nmr
-    frame_nmr = -1 
+    # frame_nmr = -1 
     coco_model = YOLO(MODEL_DIR)
     license_plate_detector = YOLO(LINCEMSE_MODEL_DIR)
     formatted_datetime = datetime.now().strftime("%Y_%m_%d")
@@ -306,8 +306,8 @@ def stream(address_id):
         if ret:
             results[frame_nmr] = {}
             if frame_nmr % frame_skip == 0:  # Bỏ qua frame không cần xử lý
-                detections = coco_model(frame, classes=[2, 3, 5, 7])[0]
                 detections_ = []
+                detections = coco_model(frame, classes=[2, 3, 5, 7])[0]
                 for detection in detections.boxes.data.tolist():
                     x1, y1, x2, y2, score, class_id = detection
                     if int(class_id) in vehicles:
@@ -317,7 +317,6 @@ def stream(address_id):
                 for box in detections_:
                     x1, y1, x2, y2, _ = box
                     cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 2)
-                    
             cv2.imwrite('demo.jpg', frame)
             yield (b'--frame\r\n'
                 b'Content-Type: image/jpeg\r\n\r\n' + open('demo.jpg', 'rb').read() + b'\r\n')
