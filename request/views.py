@@ -15,6 +15,9 @@ import numpy as np
 from sort.sort import *
 from .util import *
 
+from django.http import HttpResponse
+from django.conf import settings
+
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 results = {}
@@ -251,7 +254,7 @@ class UpdateVehicle(APIView):
             return Response({"error": error_message}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
 class DeleteAllVehicles(APIView):
-    def post(self, request):
+    def delete(self, request):
         try:
             print('Deleting all vehicles')
             Vehicle.objects.all().delete()
@@ -360,3 +363,14 @@ def video_feed_tdt(request):
 
 def video_feed_dbp(request):
     return StreamingHttpResponse(stream(2), content_type="multipart/x-mixed-replace;boundary=frame")
+
+def serve_video(request):
+    # Path to your video file
+    video_path = os.path.join(settings.BASE_DIR, 'D://Video//1120.mp4')
+
+    # Open the file in binary mode
+    with open(video_path, 'rb') as f:
+        video_data = f.read()
+
+    # Return the video file as response
+    return HttpResponse(video_data, content_type='video/mp4')
